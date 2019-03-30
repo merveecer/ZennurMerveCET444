@@ -1,0 +1,27 @@
+﻿@model PLE444.Models.PrivateMessage
+
+@{
+    ViewBag.Title = "ReadMail";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+              
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <div class="pull-right">
+            <a href="@Url.Action("SendMail", new {id = Model.SenderId})" class="btn btn-default text-success">
+                Yanıtla<i class="ti ti-angle-right"></i>
+            </a>
+        </div>
+    </div>
+    <div class="panel-body">
+        <a href="@Url.Action("Profil", new { id= @Model.SenderId })">
+            <img class="img-circle" style="height:40px;" src="@Url.Content(Model.Sender.UserPhoto())">
+            <strong class="ml-md">@Model.Sender.FullName()</strong>
+        </a>
+
+        <hr />
+
+        @(new HtmlString(Model.Content))
+        
+    </div>
+</div>

@@ -1,0 +1,134 @@
+﻿@using PLE444.ViewModels
+@model DiscussionViewModel
+@{
+	ViewBag.Title = "Tartışmalar";
+	Layout = "~/Views/Shared/_Layout.cshtml";
+
+	var isCreator = Model.Role == "Creator";
+}
+
+@{ Html.RenderAction("Navigation", "Community", new { id = Model.CId }); }
+
+<style>
+	.unreadMessage {
+		background: #ffecb3;
+		box-shadow: 0 0 5px 5px #ffecb3;
+		box-shadow: 0 0 5px 5px rgba(255,236,179,1);
+		border-radius: 2px;
+	}
+
+	.reply {
+		margin-left: 47px;
+		padding: 0px 5px 0px;
+		background: aliceblue;
+	}
+</style>
+
+<div class="row">
+	<div class="col-md-9">
+		<div class="panel-group panel-default" id="accordionA">
+			@{var orderedDiscussions = Model.Discussion.OrderBy(o => o.Topic);}
+			@foreach (var discussion in orderedDiscussions.OrderByDescending(d => d.DateCreated)) {
+				var readings = discussion.Readings.FirstOrDefault(u => u.UserId == Model.CurrentUserId);
+				DateTime? lastRead = null;
+				if (readings != null) {
+					lastRead = readings.Date;
+				}
+				var unreads = new List<PLE444.Models.Message>();
+				unreads = lastRead != null ? discussion.Messages.Where(d => d.DateSent > lastRead).ToList() : discussion.Messages.ToList();
+				unreads = unreads.Except(discussion.Messages.Where(u => u.SenderId == Model.CurrentUserId).ToList()).ToList();
+
+				<div class="panel panel-default">
+					<a data-toggle="collapse" data-parent="#accordionA" DiscussionId="@discussion.ID" class="Discussion" href="#@discussion.ID">
+						<div class="panel-heading">
+
+							<h2>@discussion.Topic</h2>
+
+							<div class="pull-right">
+								@if (discussion.Readings.Count != 0) {
+									<span>@discussion.Readings.Count kişi okudu</span>
+								}
+								@if (unreads.Count != 0) {
+									<span class="badge badge-warning">@unreads.Count okunmamış</span>
+								}
+							</div>
+						</div>
+					</a>
+
+					<div id="@discussion.ID" class="collapse">
+						<div class="panel-body">
+							<div class="message">
+								@if (Model.CurrentUserId == null) {
+									<p>Mesaj yollamak için yapın</p>
+								}
+								else {
+									@Html.Partial("SendMessage", new NewMessageViewModel { DiscussionId = discussion.ID, CId = Model.CId, CurrentUserId = Model.CurrentUserId })
+								}
+								@if (isCreator) {
+									<a href="@Url.Action("RemoveTitle", "Community", new {discussionId = discussion.ID, CId = Model.CId})">
+										<small class="text-danger">Başlığı Sil</small>
+									</a>
+								}
+							</div>
+							<hr>
+
+							<div id="mess_@discussion.ID" data-isLoaded="false">
+								<p class="text-center text-info">
+									<i class="fa fa-spinner fa-pulse fa-3x fa-fw"></i>
+								</p>
+							</div>
+						</div>
+					</div>
+				</div>
+			}
+		</div>
+	</div>
+
+	<div class="col-md-3">
+		<a href="@Url.Action("AddTitle", new {id = Model.CId})" class="btn btn-primary-alt btn-lg btn-block">
+			<i class="fa fa-plus fa-bold"></i> Başlık Ekle
+		</a>
+	</div>
+</div>
+
+<script src="http://code.jquery.com/jquery-3.1.0.min.js"></script>
+
+<script>
+	var debugging = false;
+	$('.Discussion').click(function () {
+		var discussionId = $(this).attr('DiscussionId');
+		$.ajax({
+			url: '@Url.Action("Read","Community")',
+			dataType: 'json',
+			type: 'POST',
+			data: "DiscussionId=" + discussionId + "&CId=" + "@Model.CId",
+			error: function (data) {
+				if (data.status == 200) {
+					var isLoaded = $('#mess_' + discussionId).attr("data-isLoaded");
+					if (isLoaded == 'false') {
+						$('#mess_' + discussionId).html(data.responseText);
+						$('#mess_' + discussionId).data("isLoaded", 'true');
+					}
+				}
+				else {
+					$('#mess_' + discussionId).html("<p class='text-danger'>Mesajlar doldurulurken hata oluştu.</p>");
+				}
+			}
+		});
+
+	});
+	$('.page-content').on('click', '.replyBtn', function (event) {
+		var content = $(this).closest(".message").find(".content").html();
+		var parentId = $(this).data("parent-id");
+
+		console.log("parentId", parentId);
+		console.log(content);
+
+		$(this).closest(".panel-body").find(".replyDisplay").find(".content").html(content);
+		$(this).closest(".panel-body").find(".replyDisplay").find("input[name='ReplyId']").val(parentId);
+		
+		jQuery('.scrollbar-outer').scrollTop(0);
+		$(this).closest(".panel-body").find(".replyDisplay").slideDown();
+	});
+
+</script>

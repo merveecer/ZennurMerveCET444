@@ -1,0 +1,140 @@
+﻿@model PLE444.ViewModels.Chapters
+@{
+	ViewBag.Title = "Bölümler";
+	Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@{ Html.RenderAction("Navigation", "Course", new { id = Model.CourseInfo.Id }); }
+
+@if (Model != null) {
+	if (!Model.ChapterList.Any()) {
+		<div class="alert alert-dismissable alert-info">
+			<i class="ti ti-info-alt lead"></i>  Bu derse eklenmiş herhangi bir bölüm henüz yok.
+		</div>
+	}
+
+	if (Model.canEdit && Model.CourseInfo.IsCourseActive == true) {
+		<a href="@Url.Action("Create", "Chapter", new {id = Model.CourseInfo.Id})" class="btn btn-primary-alt center-block" id="dyna-del">
+			<i class="fa fa-plus"></i> Yeni Bölüm Ekle
+		</a>
+	}
+
+	<div class="panel-default" id="accordionA">
+		@foreach (var chapter in Model.ChapterList) {
+			<div class="panel panel-default">
+				<div class="panel-heading" style="cursor: pointer" data-toggle="collapse" @*data-parent="#accordionA"*@ href="#@chapter.Id">
+
+					<h2>@chapter.Title</h2>
+
+					<div class="not-pull-right-xs text-xs-center" title="@chapter.DateAdded">
+						@{var h = new PLE444.Helpers.DataManipulationHelper(); }
+						@h.GetDeltaDate(chapter.DateAdded)
+						@if (chapter.IsHidden) {
+							<i class="ti ti-lock" title="Gizli"></i>
+						}
+					</div>
+				</div>
+
+				<div id="@chapter.Id" class="collapse">
+					<div class="panel-body">
+						@(new HtmlString(chapter.Description))
+
+						<ul style="list-style-type: none" ;>
+							@foreach (var material in chapter.Materials) {
+								<li>
+									<a class="ShowModal" href="#_" data-href="@Url.Action("Detail", "Material", new { id= material.Id })" data-toggle="modal" data-target="#myModal">
+										@material.Title
+									</a>
+								</li>
+							}
+						</ul>
+					</div>
+					@if (Model.canEdit && Model.CourseInfo.IsCourseActive == true) {
+						<div class="panel-footer">
+							@if (Model.canEdit) {
+								<div class="panel-ctrls" style="float: left">
+									<a class="button-icon ml-sm" title="Düzenle" href="@Url.Action("Edit","Chapter", new {id = chapter.Id})">
+										<i class="ti ti-pencil"></i>
+									</a>
+
+									<a class="btn-remove button-icon ml-sm" title="Kaldır" data-chapter-id="@chapter.Id">
+										<i class="ti ti-trash"></i>
+									</a>
+								</div>
+							}
+							<div class="pull-right">
+								<a href="@Url.Action("Add", "Material", new {chapterId = chapter.Id})" class="btn btn-primary-alt btn-sm ">
+									<i class="fa fa-plus"></i> Materyal Ekle
+								</a>
+							</div>
+						</div>
+					}
+				</div>
+			</div>
+		}
+	</div>
+}
+<div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+	<div class="modal-dialog" role="document">
+		<div class="text-center">
+			<i class="fa fa-circle-o-notch fa-spin" style="font-size: 50px; color: white;"></i>
+		</div>
+	</div>
+</div>
+
+@section scripts
+{
+	<script>
+		$(document).ready(function () {
+			$(".btn-remove").on("click", function () {
+				var object = $(this);
+				bootbox.confirm({
+					title: "Onay",
+					message: "Bölümü kaldırmak istediğinize emin misiniz?",
+					buttons: {
+						confirm: {
+							label: 'Evet, Kaldır',
+							className: 'btn-danger-alt'
+						},
+						cancel: {
+							label: 'Hayır',
+							className: 'btn-info-alt'
+						}
+					},
+					callback: function (result) {
+						if (result) {
+							$.ajax({
+								url: "/Chapter/Delete/" + object.data('chapter-id'),
+								method: "POST",
+								dataType: 'json',
+								success: function (response) {
+									object.parent("div").parent("div").slideUp();
+								},
+								error: function (response) {
+									console.log(response);
+								}
+							});
+						}
+
+					}
+				});
+			});
+			$(".ShowModal").on("click", function (e) {
+				e.preventDefault();
+				$.ajax({
+					//RemoveFromChapter(Guid? chapterId, Guid? materialId)
+					url: $(this).data("href"),
+					method: "GET",
+					dataType: 'json',
+					success: function (response) {
+						$(".modal-dialog").html(response.responseText);
+					},
+					error: function (response) {
+						$(".modal-dialog").html(response.responseText);
+					}
+				});
+
+			});
+		});
+	</script>
+}
